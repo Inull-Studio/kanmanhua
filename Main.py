@@ -3,6 +3,10 @@
 from requests import get
 from bs4 import BeautifulSoup
 from urllib.parse import unquote
+from json import loads
+import cv2
+from os import chdir
+from tempfile import mktemp, gettempdir
 
 SEARCH_API = 'https://www.kanman.com/api/getsortlist'
 CHAPTERINFO_API = 'https://www.kanman.com/api/getchapterinfov2'
@@ -36,19 +40,49 @@ def get_chapter(comic_id):
         return soup.ol.li.a['href'].split('/')[-1].split('.')[0]
 
 
-def chapter_info(chapter_id)
+def chapter_info(comic_id, chapter_id):
+    r = get(CHAPTERINFO_API, params={
+            'comic_id': comic_id, 'chapter_newid': chapter_id, 'quality': 'middle'}, headers=HEADER)
+    r.encoding = 'utf8'
+    res = r.text
+    res = unquote(res)
+    res = loads(res)
+    if res['message'] == 'ok':
+        return res
 
 
-def get_img(chapter_id):
-    pass
+def next_chapter_info(chapter_info: dict):
+    chapter_id = chapter_info['data']['next_chapter']['chapter_newid']
+    comic_id = chapter_info['data']['comic_id']
+    r = get(CHAPTERINFO_API, params={
+            'comic_id': comic_id, 'chapter_newid': chapter_id, 'quality': 'middle'}, headers=HEADER)
+    r.encoding = 'utf8'
+    res = r.text
+    res = unquote(res)
+    res = loads(res)
+    if res['message'] == 'ok':
+        return res
 
 
-def download(img):
-    pass
+def get_imgs(chapter_info: dict):
+    return chapter_info['data']['current_chapter']['chapter_img_list']
+
+
+def download(img_url: str):
+    r = get(img_url, headers=HEADER)
+    filename = mktemp()
+    f = open(filename, 'wb')
+    f.write(r.content)
+    f.close()
+    chdir(gettempdir())
+    img = cv2.imread(filename)
+    cv2.imshow('1', img)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
 
 
 def main():
-    get_chapter(27417)
+    download(get_imgs(chapter_info(27417, 'dyhzs'))[0])
 
 
 if __name__ == '__main__':
