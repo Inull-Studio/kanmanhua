@@ -5,9 +5,11 @@ from bs4 import BeautifulSoup
 from urllib.parse import unquote
 from json import loads
 import cv2
-from os import chdir
+from os import chdir, mkdir, getcwd, path
 from tempfile import mktemp, gettempdir
+from shutil import move
 
+SRC = getcwd()
 SEARCH_API = 'https://www.kanman.com/api/getsortlist'
 CHAPTERINFO_API = 'https://www.kanman.com/api/getchapterinfov2'
 KANMANHUA = 'https://www.kanman.com'
@@ -65,24 +67,36 @@ def next_chapter_info(chapter_info: dict):
 
 
 def get_imgs(chapter_info: dict):
-    return chapter_info['data']['current_chapter']['chapter_img_list']
+    if not path.exists(path.join(SRC, 'downloads', chapter_info['data']['current_chapter']['chapter_name'])):
+        mkdir(path.join(
+            SRC, 'downloads', chapter_info['data']['current_chapter']['chapter_name']))
+    return chapter_info['data']['current_chapter']['chapter_img_list'], chapter_info['data']['current_chapter']['chapter_name']
 
 
-def download(img_url: str):
-    r = get(img_url, headers=HEADER)
-    filename = mktemp()
-    f = open(filename, 'wb')
-    f.write(r.content)
-    f.close()
-    chdir(gettempdir())
-    img = cv2.imread(filename)
-    cv2.imshow('1', img)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+def download(img_url: str, chapter_name: str):
+    try:
+        if not path.exists('downloads'):
+            mkdir('downloads')
+        r = get(img_url, headers=HEADER)
+        filename = mktemp()
+        f = open(filename, 'wb')
+        f.write(r.content)
+        f.close()
+        move(filename, path.join(
+            SRC, 'downloads', chapter_name, img_url.split('/')[-1].split('-')[0]))
+        # chdir(gettempdir())
+        # img = cv2.imread(filename)
+        # cv2.imshow('1', img)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+    except Exception as e:
+        print(e)
 
 
 def main():
-    download(get_imgs(chapter_info(27417, 'dyhzs'))[0])
+    detail = get_imgs(chapter_info(27417, 'dyhzs'))
+    for img in detail[0]:
+        download(img, detail[1])
 
 
 if __name__ == '__main__':
