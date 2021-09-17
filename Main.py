@@ -11,21 +11,23 @@ from threading import Thread
 
 from sys import argv
 
+# time.strptime('2021-09-11T09:47:50.000Z', '%Y-%m-%dT%H:%M:%S.000Z')
+
 
 class KanManHua():
     def __init__(self, proxy=False):
         super(KanManHua, self).__init__()
-        self.SRC = getcwd()
+        self.SRC = path.dirname(__file__)
         self.SEARCH_API = 'https://www.kanman.com/api/getsortlist'
         self.CHAPTERINFO_API = 'https://www.kanman.com/api/getchapterinfov2'
         self.KANMANHUA = 'https://www.kanman.com'
         self.HEADER = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 Edg/91.0.864.41'}
         if proxy:
+            print('proxy On')
             self.proxies = {'http': 'http://127.0.0.1:2802'}
-            print('proxy')
         else:
-            print('not proxy')
+            print('proxy Off')
             self.proxies = {}
 
     def _search(self, keyword):
@@ -84,7 +86,8 @@ class KanManHua():
             mkdir('downloads')
         self.comic_name = self.chapter_info['data']['comic_name']
         sets = ['/', '\\', ':', '*', '?', '"', '<', '>', '|', '.']
-        chapter_name = self.chapter_info['data']['current_chapter']['chapter_name']
+        chapter_name = self.chapter_info['data']['current_chapter']['chapter_name'].strip(
+        )
         for char in chapter_name:
             if char in sets:
                 chapter_name = chapter_name.replace(char, '')
@@ -116,8 +119,8 @@ class KanManHua():
 
 def main():
     try:
-        kanman = KanManHua(proxy=False)
-        kanman._search('妖神')
+        kanman = KanManHua()
+        kanman._search('噬龙蚁')
         kanman._get_first_chapter_id()
         kanman._chapter_info(kanman.comic_id, kanman.chapter_newid)
         while kanman._is_next_chapter():
@@ -134,6 +137,7 @@ def main():
             for t in tlist:
                 t.join()
             kanman._next_chapter_info()
+        print(kanman.comic_name, '下载完成')
     except KeyboardInterrupt:
         exit(0)
 
