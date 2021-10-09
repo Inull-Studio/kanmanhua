@@ -7,10 +7,6 @@ from json import loads
 from os import chdir, mkdir, getcwd, path
 from tempfile import mktemp, gettempdir
 from shutil import move
-from threading import Thread
-from win32file import CreateFile, SetFileTime, GetFileTime, CloseHandle
-from win32file import GENERIC_READ, GENERIC_WRITE, OPEN_EXISTING
-from pywintypes import Time
 
 from sys import argv
 
@@ -127,22 +123,14 @@ class KanManHua():
 def main():
     try:
         kanman = KanManHua()
-        if kanman._search('妖神'):
+        if kanman._search(argv[1]):
             kanman._get_first_chapter_id()
             kanman._chapter_info(kanman.comic_id, kanman.chapter_newid)
             while kanman._is_next_chapter():
                 tlist = []
                 kanman._get_imgs()
                 for img in kanman.images[0]:
-                    t = Thread(
-                        target=kanman._download, args=(img, kanman.images[1]))
-                    t.setDaemon(True)
-                    tlist.append(t)
-                    # kanman._download(img, kanman.images[1])
-                for t in tlist:
-                    t.start()
-                for t in tlist:
-                    t.join()
+                    kanman._download(img, kanman.images[1])
                 kanman._next_chapter_info()
             print(kanman.comic_name, '下载完成')
     except KeyboardInterrupt:
@@ -150,4 +138,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    if len(argv) == 2:
+        main()
+    else:
+        print('帮助:', argv[0], '<漫画名>')
