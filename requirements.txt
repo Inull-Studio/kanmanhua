@@ -1,0 +1,2 @@
+requiests
+beautifulsoup4

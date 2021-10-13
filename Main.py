@@ -142,3 +142,4 @@ if __name__ == '__main__':
         main()
     else:
         print('帮助:', argv[0], '<漫画名>')
+        input()
