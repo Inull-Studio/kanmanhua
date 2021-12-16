@@ -7,7 +7,7 @@ from json import loads
 from os import chdir, mkdir, getcwd, path
 from tempfile import mktemp, gettempdir
 from shutil import move
-
+from rich.progress import track
 from sys import argv
 
 
@@ -41,8 +41,7 @@ class KanManHua():
                     for i in range(len(res)):
                         print(
                             'id:', i+1, '\t', res[i]['comic_name'])
-                    print('请输入要爬取的漫画id:', end='')
-                    i = int(input())
+                    i = int(input('请输入要爬取的漫画id:'))
                     if i-1 in range(len(res)):
                         self.comic_id = res[i-1]['comic_id']
                         return True
@@ -77,8 +76,8 @@ class KanManHua():
             self.comic_id, self.chapter_info['data']['last_chapter_newid'])
 
     def _next_chapter_info(self):
-        chapter_newid = self.chapter_info['data']['next_chapter']['chapter_newid']
-        self._chapter_info(self.comic_id, chapter_newid)
+        self._chapter_info(
+            self.comic_id, self.chapter_info['data']['next_chapter']['chapter_newid'])
 
     def _get_imgs(self):
         if not path.exists('downloads'):
@@ -102,8 +101,7 @@ class KanManHua():
             if path.exists(path.join(self.SRC, 'downloads', self.comic_name, chapter_name, img_url.split('/')[-1].split('-')[0])):
                 return
             r = get(img_url, headers=self.HEADER, proxies=self.proxies)
-            print(
-                '正在下载:', self.comic_name, chapter_name, img_url.split('/')[-1].split('-')[0])
+            # print('正在下载:', self.comic_name, chapter_name, img_url.split('/')[-1].split('-')[0])
             filename = mktemp()
             f = open(filename, 'wb')
             f.write(r.content)
@@ -127,9 +125,8 @@ def main():
             kanman._get_first_chapter_id()
             kanman._chapter_info(kanman.comic_id, kanman.chapter_newid)
             while kanman._is_next_chapter():
-                tlist = []
                 kanman._get_imgs()
-                for img in kanman.images[0]:
+                for img in track(kanman.images[0], description=f'正在下载{kanman.images[1]}...'):
                     kanman._download(img, kanman.images[1])
                 kanman._next_chapter_info()
             print(kanman.comic_name, '下载完成')
