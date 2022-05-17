@@ -19,10 +19,12 @@ class KanManHua():
         self.CHAPTERINFO_API = 'https://www.kanman.com/api/getchapterinfov2'
         self.KANMANHUA = 'https://www.kanman.com'
         self.HEADER = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 Edg/91.0.864.41'}
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 Edg/91.0.864.41',
+            'Referer': 'https://www.kanman.com/'
+        }
         if proxy:
             print('proxy On')
-            self.proxies = {'http': 'http://127.0.0.1:2802'}
+            self.proxies = {'http': 'http://127.0.0.1:4780'}
         else:
             print('proxy Off')
             self.proxies = {}
