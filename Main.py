@@ -3,6 +3,7 @@
 from requests import get
 from bs4 import BeautifulSoup
 from urllib.parse import unquote
+from urllib.request import getproxies
 from json import loads
 from os import chdir, mkdir, getcwd, path
 from tempfile import mktemp, gettempdir
@@ -12,7 +13,7 @@ from sys import argv
 
 
 class KanManHua():
-    def __init__(self, proxy=False):
+    def __init__(self, proxy=getproxies()):
         super(KanManHua, self).__init__()
         self.SRC = path.dirname(__file__)
         self.SEARCH_API = 'https://www.kanman.com/api/getsortlist'
@@ -24,10 +25,9 @@ class KanManHua():
         }
         if proxy:
             print('proxy On')
-            self.proxies = {'http': 'http://127.0.0.1:4780'}
         else:
             print('proxy Off')
-            self.proxies = {}
+        self.proxies=proxy
 
     def _search(self, keyword):
         try:
