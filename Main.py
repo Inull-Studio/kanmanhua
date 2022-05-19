@@ -9,6 +9,7 @@ from os import chdir, mkdir, getcwd, path
 from tempfile import mktemp, gettempdir
 from shutil import move
 from rich.progress import track
+from rich import print
 from sys import argv
 
 
@@ -27,7 +28,7 @@ class KanManHua():
             print('proxy On')
         else:
             print('proxy Off')
-        self.proxies=proxy
+        self.proxies = proxy
 
     def _search(self, keyword):
         try:
@@ -113,10 +114,10 @@ class KanManHua():
         except Exception as e:
             print(e)
 
-    def _is_next_chapter(self):
+    def _is_next_chapter(self) -> bool:
         return True if self.chapter_info['data']['next_chapter'] else False
 
-    def _is_prev_chapter(self):
+    def _is_prev_chapter(self) -> bool:
         return True if self.chapter_info['data']['prev_chapter'] else False
 
 
@@ -126,11 +127,14 @@ def main():
         if kanman._search(argv[1]):
             kanman._get_first_chapter_id()
             kanman._chapter_info(kanman.comic_id, kanman.chapter_newid)
+            kanman._get_imgs()
+            for img in track(kanman.images[0], description=f'正在下载{kanman.images[1]}...'):
+                kanman._download(img, kanman.images[1])
             while kanman._is_next_chapter():
+                kanman._next_chapter_info()
                 kanman._get_imgs()
                 for img in track(kanman.images[0], description=f'正在下载{kanman.images[1]}...'):
                     kanman._download(img, kanman.images[1])
-                kanman._next_chapter_info()
             print(kanman.comic_name, '下载完成')
     except KeyboardInterrupt:
         exit(0)
