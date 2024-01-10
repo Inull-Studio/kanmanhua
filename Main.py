@@ -1,12 +1,11 @@
 # coding=utf-8
-
 from requests import get
 from bs4 import BeautifulSoup
 from urllib.parse import unquote
 from urllib.request import getproxies
 from json import loads
 from os import chdir, mkdir, getcwd, path
-from tempfile import mktemp, gettempdir
+from tempfile import mktemp
 from shutil import move
 from rich.progress import track
 from rich import print
@@ -66,11 +65,9 @@ class KanManHua():
 
     def _chapter_info(self, comic_id, chapter_newid: str):
         r = get(self.CHAPTERINFO_API, params={
-                'comic_id': comic_id, 'chapter_newid': chapter_newid, 'quality': 'middle'}, headers=self.HEADER, proxies=self.proxies)
+                'comic_id': comic_id, 'chapter_newid': chapter_newid, 'quality': 'high'}, headers=self.HEADER, proxies=self.proxies)
         r.encoding = 'utf8'
-        res = r.text
-        res = unquote(res)
-        res = loads(res)
+        res = loads(unquote(r.text))
         if res['message'] == 'ok':
             self.chapter_info = res
 
