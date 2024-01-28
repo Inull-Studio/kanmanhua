@@ -4,11 +4,12 @@ from bs4 import BeautifulSoup
 from urllib.parse import unquote
 from urllib.request import getproxies
 from json import loads
-from os import chdir, mkdir, getcwd, path
+from os import mkdir, path
 from tempfile import mktemp
 from shutil import move
 from rich.progress import track
 from rich import print
+from concurrent.futures import ThreadPoolExecutor
 from sys import argv
 
 
@@ -108,6 +109,7 @@ class KanManHua():
             f.close()
             move(filename, path.join(
                 self.SRC, 'downloads', self.comic_name, chapter_name, img_url.split('/')[-1].split('-')[0]))
+            return True
         except Exception as e:
             print(e)
 
@@ -128,10 +130,15 @@ def main():
             for img in track(kanman.images[0], description=f'正在下载{kanman.images[1]}...'):
                 kanman._download(img, kanman.images[1])
             while kanman._is_next_chapter():
+                results = []
                 kanman._next_chapter_info()
                 kanman._get_imgs()
-                for img in track(kanman.images[0], description=f'正在下载{kanman.images[1]}...'):
-                    kanman._download(img, kanman.images[1])
+                with ThreadPoolExecutor(max_workers=8) as execute:
+                    for img in kanman.images[0]:
+                        res = execute.submit(kanman._download, img, kanman.images[1])
+                        results.append(res)
+                    for r in track(results, description=f'正在下载{kanman.images[1]}...'):
+                        r.result()
             print(kanman.comic_name, '下载完成')
     except KeyboardInterrupt:
         exit(0)
