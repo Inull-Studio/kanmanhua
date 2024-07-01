@@ -1,4 +1,2 @@
-downloads/*
-Scripts
-Lib
-pyvenv.cfg
+downloads/
+venv

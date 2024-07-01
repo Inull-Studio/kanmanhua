@@ -1,6 +1,5 @@
-# coding=utf-8
+# coding: utf-8
 from requests import get
-from bs4 import BeautifulSoup
 from urllib.parse import unquote
 from urllib.request import getproxies
 from json import loads
