@@ -19,6 +19,7 @@ class KanManHua():
         self.SRC = path.dirname(__file__)
         self.SEARCH_API = 'https://www.kanman.com/api/getsortlist'
         self.CHAPTERINFO_API = 'https://www.kanman.com/api/getchapterinfov2'
+        self.COMICINFO_API = 'https://www.kanman.com/api/getcomicinfo_body'
         self.KANMANHUA = 'https://www.kanman.com'
         self.HEADER = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 Edg/91.0.864.41',
@@ -54,15 +55,13 @@ class KanManHua():
         except Exception as e:
             print(e)
 
-    def _get_first_chapter_id(self):
-        r = get(self.KANMANHUA+f'/{self.comic_id}',
-                headers=self.HEADER, proxies=self.proxies)
-        if r.status_code == 200:
-            r.encoding = 'utf8'
-            soup = BeautifulSoup(r.text, 'lxml')
-            self.chapter_newid = soup.ol.li.a['href'].split(
-                '/')[-1].split('.')[0]
-            print('获取chapterid成功', self.chapter_newid)
+    def get_comic_info(self):
+        r = get(self.COMICINFO_API, params={'comic_id': self.comic_id})
+        r.encoding = 'utf8'
+        res = r.json()
+        if res['message'] == 'ok':
+            self.chapters = res['data']['comic_chapter']
+            self.chapters.reverse()
 
     def _chapter_info(self, comic_id, chapter_newid: str):
         r = get(self.CHAPTERINFO_API, params={
@@ -71,14 +70,6 @@ class KanManHua():
         res = loads(unquote(r.text))
         if res['message'] == 'ok':
             self.chapter_info = res
-
-    def _last_chapter_info(self):
-        self._chapter_info(
-            self.comic_id, self.chapter_info['data']['last_chapter_newid'])
-
-    def _next_chapter_info(self):
-        self._chapter_info(
-            self.comic_id, self.chapter_info['data']['next_chapter']['chapter_newid'])
 
     def _get_imgs(self):
         if not path.exists('downloads'):
@@ -113,31 +104,21 @@ class KanManHua():
         except Exception as e:
             print(e)
 
-    def _is_next_chapter(self) -> bool:
-        return True if self.chapter_info['data']['next_chapter'] else False
-
-    def _is_prev_chapter(self) -> bool:
-        return True if self.chapter_info['data']['prev_chapter'] else False
-
 
 def main():
     try:
         kanman = KanManHua()
         if kanman._search(argv[1]):
-            kanman._get_first_chapter_id()
-            kanman._chapter_info(kanman.comic_id, kanman.chapter_newid)
-            kanman._get_imgs()
-            for img in track(kanman.images[0], description=f'正在下载{kanman.images[1]}...'):
-                kanman._download(img, kanman.images[1])
-            while kanman._is_next_chapter():
+            kanman.get_comic_info()
+            for chapter in kanman.chapters:
                 results = []
-                kanman._next_chapter_info()
+                kanman._chapter_info(kanman.comic_id, chapter['chapter_id'])
                 kanman._get_imgs()
                 with ThreadPoolExecutor(max_workers=8) as execute:
                     for img in kanman.images[0]:
                         res = execute.submit(kanman._download, img, kanman.images[1])
                         results.append(res)
-                    for r in track(results, description=f'正在下载{kanman.images[1]}...'):
+                    for r in track(results, description='正在下载{}...'.format(chapter['chapter_name'])):
                         r.result()
             print(kanman.comic_name, '下载完成')
     except KeyboardInterrupt:
