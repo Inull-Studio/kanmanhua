@@ -9,8 +9,7 @@ import tempfile
 from urllib.parse import unquote
 from urllib.request import getproxies
 
-from requests import get
-from rich import print
+from requests import get, post
 from rich.progress import track
 
 
@@ -26,19 +25,15 @@ class KanManHua:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 Edg/91.0.864.41",
             "Referer": "https://www.kanman.com/",
         }
+        self.proxies = {}
         if proxy:
             print("proxy On")
-        else:
-            print("proxy Off")
-        self.proxies = proxy
+            self.proxies = {"http": proxy} if "http" in proxy else {"https": proxy}
 
     def _search(self, keyword):
         try:
-            r = get(
-                self.SEARCH_API,
-                params={"search_key": keyword},
-                headers=self.HEADER,
-                proxies=self.proxies,
+            r = self._get(
+                self.SEARCH_API, params={"search_key": keyword}, headers=self.HEADER
             )
             res = r.json()
             if res["message"] == "ok":
@@ -60,7 +55,7 @@ class KanManHua:
             print(e)
 
     def get_comic_info(self):
-        r = get(self.COMICINFO_API, params={"comic_id": self.comic_id})
+        r = self._get(self.COMICINFO_API, params={"comic_id": self.comic_id})
         r.encoding = "utf8"
         res = r.json()
         if res["message"] == "ok":
@@ -68,7 +63,7 @@ class KanManHua:
             self.chapters.reverse()
 
     def _chapter_info(self, comic_id, chapter_newid: str):
-        r = get(
+        r = self._get(
             self.CHAPTERINFO_API,
             params={
                 "comic_id": comic_id,
@@ -76,7 +71,6 @@ class KanManHua:
                 "quality": "high",
             },
             headers=self.HEADER,
-            proxies=self.proxies,
         )
         r.encoding = "utf8"
         res = loads(unquote(r.text))
@@ -118,7 +112,7 @@ class KanManHua:
                 )
             ):
                 return
-            r = get(img_url, headers=self.HEADER, proxies=self.proxies)
+            r = self._get(img_url, headers=self.HEADER)
             # print('正在下载:', self.comic_name, chapter_name, img_url.split('/')[-1].split('-')[0])
             fd, filename = tempfile.mkstemp()
             os.write(fd, r.content)
@@ -137,10 +131,20 @@ class KanManHua:
         except Exception as e:
             print(e)
 
+    def _get(self, url, **kwargs):
+        if self.proxies:
+            kwargs["proxies"] = self.proxies
+        return get(url, **kwargs)
 
-def main():
+    def _post(self, url, **kwargs):
+        if self.proxies:
+            kwargs["proxies"] = self.proxies
+        return post(url, **kwargs)
+
+
+def main(proxy=None):
     try:
-        kanman = KanManHua()
+        kanman = KanManHua(proxy)
         if kanman._search(argv[1]):
             kanman.get_comic_info()
             for chapter in kanman.chapters:
@@ -165,5 +169,7 @@ def main():
 if __name__ == "__main__":
     if len(argv) == 2:
         main()
+    elif len(argv) == 3:
+        main(argv[2])
     else:
-        print("帮助:", argv[0], "<漫画名>")
+        print("帮助:", argv[0], "<漫画名> [proxy address]")
