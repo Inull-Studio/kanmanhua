@@ -1,11 +1,12 @@
 # coding: utf-8
+import os
+import pathlib
+import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from json import loads
-from os import mkdir, path
-import os
+from os import path
 from shutil import move
 from sys import argv
-import tempfile
 from urllib.parse import unquote
 from urllib.request import getproxies
 
@@ -16,7 +17,9 @@ from rich.progress import track
 class KanManHua:
     def __init__(self, proxy=getproxies()):
         super(KanManHua, self).__init__()
-        self.SRC = path.dirname(__file__)
+        self.SRC = pathlib.Path(path.dirname(__file__))
+        self.DOWN_DIR = self.SRC / "downloads"
+        self.DOWN_DIR.mkdir(exist_ok=True)
         self.SEARCH_API = "https://www.kanman.com/api/getsortlist"
         self.CHAPTERINFO_API = "https://www.kanman.com/api/getchapterinfov2"
         self.COMICINFO_API = "https://www.kanman.com/api/getcomicinfo_body"
@@ -25,6 +28,7 @@ class KanManHua:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.77 Safari/537.36 Edg/91.0.864.41",
             "Referer": "https://www.kanman.com/",
         }
+
         self.proxies = {}
         if proxy:
             print("proxy On")
@@ -78,8 +82,6 @@ class KanManHua:
             self.chapter_info = res
 
     def _get_imgs(self):
-        if not path.exists("downloads"):
-            mkdir("downloads")
         self.comic_name = self.chapter_info["data"]["comic_name"]
         sets = ["/", "\\", ":", "*", "?", '"', "<", ">", "|", "."]
         chapter_name = self.chapter_info["data"]["current_chapter"][
@@ -88,12 +90,9 @@ class KanManHua:
         for char in chapter_name:
             if char in sets:
                 chapter_name = chapter_name.replace(char, "")
-        if not path.exists(
-            path.join(self.SRC, "downloads", self.comic_name, chapter_name)
-        ):
-            if not path.exists(path.join(self.SRC, "downloads", self.comic_name)):
-                mkdir(path.join(self.SRC, "downloads", self.comic_name))
-            mkdir(path.join(self.SRC, "downloads", self.comic_name, chapter_name))
+        (self.DOWN_DIR / self.comic_name / chapter_name).mkdir(
+            parents=True, exist_ok=True
+        )
         self.images = (
             self.chapter_info["data"]["current_chapter"]["chapter_img_list"],
             chapter_name,
@@ -101,32 +100,21 @@ class KanManHua:
         self.down_chapter_name = chapter_name
 
     def _download(self, img_url: str, chapter_name: str):
+        dest_path = (
+            self.DOWN_DIR
+            / self.comic_name
+            / chapter_name
+            / img_url.split("/")[-1].split("-")[0]
+        )
         try:
-            if path.exists(
-                path.join(
-                    self.SRC,
-                    "downloads",
-                    self.comic_name,
-                    chapter_name,
-                    img_url.split("/")[-1].split("-")[0],
-                )
-            ):
+            if dest_path.exists():
                 return
             r = self._get(img_url, headers=self.HEADER)
             # print('正在下载:', self.comic_name, chapter_name, img_url.split('/')[-1].split('-')[0])
             fd, filename = tempfile.mkstemp()
             os.write(fd, r.content)
             os.close(fd)
-            move(
-                filename,
-                path.join(
-                    self.SRC,
-                    "downloads",
-                    self.comic_name,
-                    chapter_name,
-                    img_url.split("/")[-1].split("-")[0],
-                ),
-            )
+            move(filename, dest_path)
             return True
         except Exception as e:
             print(e)
@@ -163,7 +151,7 @@ def main(proxy=None):
                         r.result()
             print(kanman.comic_name, "下载完成")
     except KeyboardInterrupt:
-        exit(0)
+        os._exit(0)
 
 
 if __name__ == "__main__":
